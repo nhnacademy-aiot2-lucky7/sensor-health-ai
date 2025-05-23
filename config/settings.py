@@ -1,0 +1,1 @@
+SENSOR_SERVICE_URL = "http://sensor-service:10238/api/v1/threshold-histories"
