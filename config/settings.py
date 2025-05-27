@@ -1,9 +1,9 @@
-SENSOR_SERVICE_URL = "http://sensor-service:10238/api/v1/threshold-histories"
+import os
+from dotenv import load_dotenv
 
-RABBITMQ = {
-    "host": "localhost",
-    "port": 5672,
-    "queue": "sensor_alerts",  # 보내려는 큐 이름
-    "username": "guest",
-    "password": "guest"
-}
+# 개발 환경에서는 .env 파일을 불러옴
+if os.getenv("USE_DOTENV", "true").lower() == "true":
+    load_dotenv()
+
+SENSOR_API_URL = os.getenv("SENSOR_API_URL")
+ANALYSIS_RESULT_API_URL = os.getenv("ANALYSIS_RESULT_API_URL")
