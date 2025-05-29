@@ -1,39 +1,73 @@
-import schedule
-import time
+# scheduler.py
 import logging
-from threading import Thread
+import signal
+import sys
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
+from sensor_service import trigger_analysis
 
-# AI 학습 함수 (아직 구현 전이지만 임시 placeholder)
-def train_incremental_model():
-    logging.info("[AI] Incremental 모델 학습 시작")
-    # TODO: 분석 완료된 센서 중 최근 1시간 이내 임계치 변화 데이터 가져와 학습
-    # model.train_incremental(data)
-    logging.info("[AI] Incremental 모델 학습 완료")
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-def train_daily_batch_model():
-    logging.info("[AI] 일일 배치 모델 학습 시작")
-    # TODO: 전체 센서 임계치 변화 추이 기반 전체 학습 수행
-    # model.train_full(data)
-    logging.info("[AI] 일일 배치 모델 학습 완료")
+scheduler = BlockingScheduler()
 
-def run_async(job_func):
-    t = Thread(target=job_func)
-    t.daemon = True
-    t.start()
+# 안전한 job 실행을 위한 래퍼 함수
+def safe_trigger_analysis(time_str):
+    try:
+        logger.info(f"[🚀] 센서 분석 시작: {time_str}")
+        trigger_analysis(time_str)
+        logger.info(f"[✅] 센서 분석 완료: {time_str}")
+    except Exception as e:
+        logger.error(f"[❌] 센서 분석 실패 ({time_str}): {e}")
 
-def run_ai_scheduler():
-    logging.basicConfig(level=logging.INFO)
+# job 이벤트 리스너
+def job_listener(event):
+    if event.exception:
+        logger.error(f"Job {event.job_id} 실행 중 오류: {event.exception}")
+    else:
+        logger.info(f"Job {event.job_id} 성공적으로 실행됨")
 
-    # 1시간마다 incremental 학습 (정각 + 10분)
-    schedule.every().hour.at(":10").do(lambda: run_async(train_incremental_model))
-    logging.info("[SCHEDULER] Incremental 모델 학습: 매시간 +10분 예약됨")
+# 스케줄 등록
+scheduler.add_job(
+    lambda: safe_trigger_analysis("01:30"), 
+    'cron', 
+    hour=1, 
+    minute=30,
+    id='sensor_analysis_0130'
+)
+scheduler.add_job(
+    lambda: safe_trigger_analysis("02:30"), 
+    'cron', 
+    hour=2, 
+    minute=30,
+    id='sensor_analysis_0230'
+)
 
-    # 매일 02:30에 배치 학습
-    schedule.every().day.at("02:30").do(lambda: run_async(train_daily_batch_model))
-    logging.info("[SCHEDULER] 배치 모델 학습: 매일 02:30 예약됨")
+# 이벤트 리스너 등록
+scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
-    logging.info("[SCHEDULER] AI 학습 스케줄러 시작됨")
+# Graceful shutdown 처리
+def signal_handler(signum, frame):
+    logger.info("[🛑] 종료 신호 수신, 스케줄러 정리 중...")
+    scheduler.shutdown(wait=True)
+    logger.info("[👋] 스케줄러 정상 종료")
+    sys.exit(0)
 
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+if __name__ == "__main__":
+    try:
+        logger.info("[🔁] 스케줄러 시작")
+        logger.info("등록된 작업:")
+        for job in scheduler.get_jobs():
+            logger.info(f"  - {job.id}: {job.trigger}")
+        
+        scheduler.start()
+    except Exception as e:
+        logger.error(f"[💥] 스케줄러 시작 실패: {e}")
+        sys.exit(1)
