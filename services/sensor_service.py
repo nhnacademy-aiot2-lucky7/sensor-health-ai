@@ -4,36 +4,58 @@ import os
 from datetime import datetime
 from config import SENSOR_API_URL
 
-# 저장 경로 및 파일 이름
 DATA_DIR = "data"
-CSV_FILE = os.path.join(DATA_DIR, "threshold_history.csv")
+SENSOR_ENDPOINT = f"{SENSOR_API_URL}/api/threshold-histories"
 
-SENSOR_ENDPOINT = f"{SENSOR_API_URL}/api/v1/threshold-histories"
-
-def fetch_threshold_history() -> pd.DataFrame:
+def flatten_sensor_data(raw_data: dict) -> pd.DataFrame:
     """
-    센서 서비스에서 임계치 변화량 데이터를 받아옵니다.
+    중첩된 센서 데이터를 평탄화하여 DataFrame으로 변환합니다.
+    """
+    records = []
+
+    gateway_id = raw_data.get("gateway_id")
+    for sensor in raw_data.get("sensors", []):
+        sensor_id = sensor.get("sensor_id")
+        for t in sensor.get("types", []):
+            sensor_type = t.get("type_en_name") or t.get("type")
+            records.append({
+                "gateway_id": gateway_id,
+                "sensor_id": sensor_id,
+                "sensor_type": sensor_type,
+                "min_diff": t.get("min_diff"),
+                "max_diff": t.get("max_diff"),
+                "avg_diff": t.get("avg_diff"),
+                "date": pd.to_datetime(t.get("calculated_at"))
+            })
+
+    return pd.DataFrame(records)
+
+def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
+    """
+    센서 서비스에서 임계치 변화량 데이터를 받아와 평탄화합니다.
+    target_date가 None이면 오늘 날짜 기준으로 요청합니다.
+    Args:
+        target_date (datetime): 조회할 날짜
     Returns:
-        pd.DataFrame: 센서 데이터 (sensor_id, date, min_diff, max_diff, avg_diff)
+        pd.DataFrame
     """
     try:
-        response = requests.get(SENSOR_ENDPOINT, timeout=5)
+        if target_date is None:
+            target_date = datetime.now()
+        date_str = target_date.strftime("%Y-%m-%d")
+        url = f"{SENSOR_ENDPOINT}/{date_str}"
+        
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
-        data = response.json()
-        df = pd.DataFrame(data)
-
-        if 'date' in df.columns:
-            df['date'] = pd.to_datetime(df['date'])
-
-        return df
+        raw_data = response.json()
+        return flatten_sensor_data(raw_data)
     except Exception as e:
         print(f"[ERROR] 센서 API 호출 실패: {e}")
         return pd.DataFrame()
 
-def save_to_csv(df: pd.DataFrame):
+def save_unified_by_sensor_type(df: pd.DataFrame):
     """
-    데이터를 CSV에 누적 저장합니다.
-    이미 존재하는 레코드는 중복 저장하지 않습니다.
+    센서 타입별로 데이터를 하나의 CSV로 통합 저장합니다.
     """
     if df.empty:
         print("[INFO] 저장할 데이터가 없습니다.")
@@ -41,18 +63,22 @@ def save_to_csv(df: pd.DataFrame):
 
     os.makedirs(DATA_DIR, exist_ok=True)
 
-    # 기존 데이터 불러오기 (있다면)
-    if os.path.exists(CSV_FILE):
-        existing_df = pd.read_csv(CSV_FILE, parse_dates=['date'])
-        combined_df = pd.concat([existing_df, df], ignore_index=True)
-        combined_df.drop_duplicates(subset=["sensor_id", "date"], inplace=True)
-    else:
-        combined_df = df
+    for sensor_type, group_df in df.groupby("sensor_type"):
+        filename = f"{sensor_type}.csv"
+        csv_path = os.path.join(DATA_DIR, filename)
 
-    combined_df.sort_values(by=["sensor_id", "date"], inplace=True)
-    combined_df.to_csv(CSV_FILE, index=False)
-    print(f"[INFO] {len(df)}개 레코드 저장 완료 ({datetime.now().isoformat()})")
+        if os.path.exists(csv_path):
+            existing_df = pd.read_csv(csv_path, parse_dates=["date"])
+            combined_df = pd.concat([existing_df, group_df], ignore_index=True)
+            combined_df.drop_duplicates(subset=["gateway_id", "sensor_id", "date"], inplace=True)
+        else:
+            combined_df = group_df
+
+        combined_df.sort_values(by=["sensor_id", "date"], inplace=True)
+        combined_df.to_csv(csv_path, index=False)
+        print(f"[INFO] {sensor_type} → {len(group_df)}개 저장 완료 ({datetime.now().isoformat()})")
 
 if __name__ == "__main__":
-    df = fetch_threshold_history()
-    save_to_csv(df)
+    # 현재 날짜를 자동으로 넣어서 호출
+    df = fetch_threshold_history(datetime.now())
+    save_unified_by_sensor_type(df)

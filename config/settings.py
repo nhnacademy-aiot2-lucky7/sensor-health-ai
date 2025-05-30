@@ -9,11 +9,6 @@ if os.getenv("USE_DOTENV", "true").lower() == "true":
 SENSOR_API_URL = os.getenv("SENSOR_API_URL")
 ANALYSIS_RESULT_API_URL = os.getenv("ANALYSIS_RESULT_API_URL")
 
-# redis
-redis_client = redis.Redis(
-    host=os.getenv("REDIS_HOST"),
-    port=os.getenv("REDIS_PORT"),
-    password=os.getenv("REDIS_PASSWORD"),
-    db=os.getenv("REDIS_DB"),
-    decode_responses=True  # 문자열로 받기 위해 설정
-)
+# 예측 기준 시간
+PREDICTION_CUTOFF_HOUR = 2  # 새벽 2시 기준
+PREDICTION_LOG_FILE = "prediction_log.txt"
