@@ -1,1 +1,1 @@
-# threshold-trend-ai
+# sensor-health-ai
