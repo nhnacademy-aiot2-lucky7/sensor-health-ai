@@ -4,8 +4,11 @@ import os
 from datetime import datetime
 from config import SENSOR_API_URL
 
+import logging
+
 DATA_DIR = "data"
 SENSOR_ENDPOINT = f"{SENSOR_API_URL}/api/threshold-histories"
+logger = logging.getLogger(__name__)
 
 def flatten_sensor_data(raw_data: dict) -> pd.DataFrame:
     """
@@ -50,7 +53,7 @@ def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
         raw_data = response.json()
         return flatten_sensor_data(raw_data)
     except Exception as e:
-        print(f"[ERROR] 센서 API 호출 실패: {e}")
+        logger.error(f"센서 API 호출 실패: {e}", exc_info=True)
         return pd.DataFrame()
 
 def save_unified_by_sensor_type(df: pd.DataFrame):
@@ -58,7 +61,7 @@ def save_unified_by_sensor_type(df: pd.DataFrame):
     센서 타입별로 데이터를 하나의 CSV로 통합 저장합니다.
     """
     if df.empty:
-        print("[INFO] 저장할 데이터가 없습니다.")
+        logger.info("저장할 데이터가 없습니다.")
         return
 
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -76,7 +79,7 @@ def save_unified_by_sensor_type(df: pd.DataFrame):
 
         combined_df.sort_values(by=["sensor_id", "date"], inplace=True)
         combined_df.to_csv(csv_path, index=False)
-        print(f"[INFO] {sensor_type} → {len(group_df)}개 저장 완료 ({datetime.now().isoformat()})")
+        logger.info(f"{sensor_type} → {len(group_df)}개 저장 완료 ({datetime.now().isoformat()})")
 
 if __name__ == "__main__":
     # 현재 날짜를 자동으로 넣어서 호출

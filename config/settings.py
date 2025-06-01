@@ -1,5 +1,4 @@
 import os
-import redis
 from dotenv import load_dotenv
 
 # 개발 환경에서는 .env 파일을 불러옴

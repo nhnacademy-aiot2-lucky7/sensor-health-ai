@@ -1,72 +1,85 @@
 import pandas as pd
 import pickle
 import os
+import logging
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
+# 설정
+REQUIRED_DAYS = 15
+REQUIRED_COLUMNS = {'min_diff', 'max_diff', 'avg_diff', 'health_score'}
+
+# 로거 설정
+logger = logging.getLogger(__name__)
+
+def validate_data(data: pd.DataFrame):
+    """필수 컬럼 및 결측값 검사"""
+    missing = REQUIRED_COLUMNS - set(data.columns)
+    if missing:
+        raise ValueError(f"필수 컬럼 누락: {missing}")
+    return data.dropna(subset=['min_diff', 'max_diff', 'avg_diff'])
+
 def train_model(data: pd.DataFrame):
-    # 필수 컬럼 체크
-    required_cols = {'min_diff', 'max_diff', 'avg_diff', 'health_score'}
-    if not required_cols.issubset(set(data.columns)):
-        missing = required_cols - set(data.columns)
-        raise ValueError(f"데이터에 필요한 컬럼이 없습니다: {missing}")
-    
-    # NULL 제거 추가 (이 3개 컬럼 중 하나라도 NULL이면 제거)
-    data = data.dropna(subset=['min_diff', 'max_diff', 'avg_diff'])
-    
-    # 입력과 타겟 분리
-    x = data[['min_diff', 'max_diff', 'avg_diff']]
+    """모델 학습"""
+    data = validate_data(data)
+
+    X = data[['min_diff', 'max_diff', 'avg_diff']]
     y = data['health_score']
-    
-    # 학습/검증 분리
-    x_train, x_val, y_train, y_val = train_test_split(
-        x, y, test_size=0.2, random_state=42, shuffle=True
+
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, test_size=0.2, random_state=42, shuffle=True
     )
-    
+
     model = RandomForestRegressor(
-        n_estimators=150, 
-        random_state=42,
+        n_estimators=150,
         min_samples_leaf=3,
-        max_features='sqrt'
+        max_features='sqrt',
+        random_state=42
     )
-    model.fit(x_train, y_train)
-    
-    y_pred = model.predict(x_val)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_val)
     mse = mean_squared_error(y_val, y_pred)
-    print(f"[INFO] 검증 MSE: {mse:.5f}")
-    
+    logger.info(f"[모델검증] MSE = {mse:.5f}")
+
     return model
 
-def save_model(model, save_path):
+def save_model(model, save_path: str):
+    """모델 저장"""
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     with open(save_path, 'wb') as f:
         pickle.dump(model, f)
-    print(f"[INFO] 모델 저장 완료: {save_path}")
+    logger.info(f"[모델저장] 완료: {save_path}")
 
 def train_all_models(csv_path: str, sensor_type: str):
-    df = pd.read_csv(csv_path, parse_dates=['date'])
-    
-    for (gateway_id, sensor_id), group in df.groupby(['gateway_id', 'sensor_id']):
-        if len(group) < 15:
-            print(f"[WARN] {gateway_id}-{sensor_id} 데이터 부족({len(group)}일), 학습 생략")
+    """센서별 전체 모델 학습"""
+    try:
+        df = pd.read_csv(csv_path, parse_dates=['date'])
+    except Exception as e:
+        logger.error(f"[파일로드 실패] {csv_path}: {e}")
+        return
+
+    grouped = df.groupby(['gateway_id', 'sensor_id'])
+
+    for (gateway_id, sensor_id), group in grouped:
+        if len(group) < REQUIRED_DAYS:
+            logger.warning(f"[데이터부족] {gateway_id}-{sensor_id}: {len(group)}일")
             continue
-        
-        print(f"[INFO] {gateway_id}-{sensor_id} 학습 시작, 데이터 수: {len(group)}")
+
+        logger.info(f"[학습시작] {gateway_id}-{sensor_id} - {len(group)}건")
         try:
             model = train_model(group)
             save_path = f"model_registry/{sensor_type}/{gateway_id}_{sensor_id}.pkl"
             save_model(model, save_path)
         except Exception as e:
-            print(f"[ERROR] {gateway_id}-{sensor_id} 학습 실패: {e}")
+            logger.error(f"[학습실패] {gateway_id}-{sensor_id}: {e}")
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 3:
-        print("사용법: python model_trainer.py <csv_path> <sensor_type>")
+        logger.error("사용법: python model_trainer.py <csv_path> <sensor_type>")
         sys.exit(1)
-    
-    csv_path = sys.argv[1]
-    sensor_type = sys.argv[2]
-    
+
+    csv_path, sensor_type = sys.argv[1], sys.argv[2]
     train_all_models(csv_path, sensor_type)

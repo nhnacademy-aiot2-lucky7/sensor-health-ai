@@ -1,3 +1,48 @@
+# 파이썬 바이트 코드 및 캐시 파일 무시
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C 확장 파일 무시
+*.so
+
+# 빌드/패키징 관련 파일 무시
+build/
+dist/
+*.egg-info/
+
+# 가상환경
+.venv/
+venv/
+
+# 주피터 노트북 체크포인트 파일 무시
+.ipynb_checkpoints/
+
+# 환경변수 설정 파일 무시
 .env
 .env.*
-!.env.example
+
+# 로그 파일 무시
+*.log
+logs/
+prediction_log.txt  # 예측 결과 로그 파일
+
+# 모델 파일 및 저장소 무시 (학습된 모델이나 중간 결과)
+model_registry/
+*.pkl  # 피클로 저장된 모델 파일
+
+# 운영체제나 IDE가 생성하는 불필요한 파일 무시
+.DS_Store  # macOS에서 자동 생성
+Thumbs.db  # Windows에서 자동 생성
+.vscode/   # VSCode 설정 폴더
+.idea/     # IntelliJ, PyCharm 등의 설정 폴더
+
+# pytest 캐시 무시
+.pytest_cache/
+.cache/
+
+# 정적 분석 및 커버리지 도구 관련 파일 무시
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/

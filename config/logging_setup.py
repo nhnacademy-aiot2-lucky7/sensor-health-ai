@@ -11,7 +11,7 @@ for handler in logging.root.handlers[:]:
 
 # 로그 파일 경로 및 로그 레벨 가져오기
 log_file = os.getenv("LOGGING_FILE_NAME", "logs/sensor-health-ai.log")
-log_level_str = os.getenv("LOGGING_LEVEL", "INFO").upper()
+log_level_str = os.getenv("LOGGING_LEVEL", "DEBUG").upper()
 log_level = getattr(logging, log_level_str, logging.INFO)
 
 # 로그 디렉토리 없으면 생성
@@ -22,11 +22,7 @@ logging.basicConfig(
     level=log_level,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler(log_file),
+        logging.FileHandler(log_file, encoding='utf-8'),
         logging.StreamHandler()  # 콘솔 출력도 병행
     ]
 )
-
-# 사용 예시
-logger = logging.getLogger(__name__)
-logger.info("🔧 로그 설정이 완료되었습니다.")
