@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import os
 from datetime import datetime
-from config import SENSOR_API_URL
+from config.settings import SENSOR_API_URL
 
 import logging
 

@@ -3,8 +3,7 @@ import pickle
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from config import settings
-from heuristic_health_score import heuristic_health_score
+from models.heuristic_health_score import heuristic_health_score
 from services.analysis_result_service import send_analysis_result
 
 
@@ -40,7 +39,8 @@ def predict(sensor_type: str, gateway_id: str, sensor_id: str, data: pd.DataFram
     analyzed_at = int(datetime.now(KST).timestamp())
 
     if actual_days < REQUIRED_DAYS:
-        logger.info(f"데이터 일수 부족: {actual_days} < {REQUIRED_DAYS}")
+        logger.warning(f"데이터 일수 부족: {actual_days}일 - heuristic 점수 계산으로 대체합니다.")
+        score = heuristic_health_score(data)
         return {
             "result": {
                 "analysisType": "THRESHOLD_DIFF_ANALYSIS",
@@ -49,11 +49,11 @@ def predict(sensor_type: str, gateway_id: str, sensor_id: str, data: pd.DataFram
                     "sensorId": sensor_id,
                     "sensorType": sensor_type
                 },
-                "model": None,
-                "healthScore": None,
+                "model": "Heuristic-based (insufficient data)",
+                "healthScore": round(score, 4),
                 "analyzedAt": analyzed_at,
                 "meta": {
-                    "analysisStatus": "insufficient_data",
+                    "analysisStatus": "insufficient_data_heuristic_used",
                     "failureReason": "not_enough_days",
                     "actualDataDays": actual_days,
                     "requiredData_days": REQUIRED_DAYS,

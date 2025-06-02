@@ -1,5 +1,5 @@
 import requests
-from config import ANALYSIS_RESULT_API_URL
+from config.settings import ANALYSIS_RESULT_API_URL
 
 import logging
 
