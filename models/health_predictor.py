@@ -13,14 +13,6 @@ KST = timezone(timedelta(hours=9))
 
 logger = logging.getLogger(__name__)
 
-def get_logical_date():
-    now = datetime.now()
-    if now.hour < settings.PREDICTION_CUTOFF_HOUR:
-        logical_date = now - timedelta(days=1)
-    else:
-        logical_date = now
-    return logical_date.strftime("%Y-%m-%d")
-
 def load_model(sensor_type: str, gateway_id: str, sensor_id: str):
     model_path = f"model_registry/{sensor_type}/{gateway_id}_{sensor_id}.pkl"
     if not os.path.isfile(model_path):
