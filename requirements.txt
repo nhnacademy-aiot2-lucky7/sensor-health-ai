@@ -1,0 +1,8 @@
+# 데이터 전처리 및 시계열 처리
+pandas
+
+# 머신러닝 분석
+scikit-learn
+
+# .env에서 설정 가져오기
+python-dotenv
