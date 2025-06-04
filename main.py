@@ -1,9 +1,8 @@
 import time
+import logging
 import schedule
 from config.settings import JOB_MAIN_TIME, JOB_CHECK_TIME
 from scheduler.analyze_schedule import job_main, job_check
-
-import logging
 
 logger = logging.getLogger(__name__)
 
