@@ -1,4 +1,4 @@
-name: Sensor Health Ai
+name: CI - Build and Push Docker Image to GHCR
 
 on:
   push:
@@ -17,4 +17,4 @@ jobs:
     uses: nhnacademy-aiot2-lucky7/common-infra/.github/workflows/reusable-docker-publish.yml@main
     with:
       image-name: sensor-health-ai
-      use-github-token: true
+      use-github-token: false
