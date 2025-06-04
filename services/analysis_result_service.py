@@ -5,7 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_RESULT_ENDPOINT = f"{ANALYSIS_RESULT_API_URL}/api"
+ANALYSIS_RESULT_ENDPOINT = f"{ANALYSIS_RESULT_API_URL}/analysis-results"
 
 def send_analysis_result(result: dict):
     try:
