@@ -1,3 +1,4 @@
+import config.logging_setup
 import time
 import logging
 import schedule
