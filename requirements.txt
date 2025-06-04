@@ -6,3 +6,12 @@ scikit-learn
 
 # .env에서 설정 가져오기
 python-dotenv
+
+# 주기 실행 스케줄러 (1시간마다 실행)
+schedule
+
+# .env에서 설정 가져오기
+dotenv
+
+# 날짜 생성
+datetime
