@@ -18,9 +18,3 @@ datetime
 
 # request
 requests
-
-# os 신호 처리용 표준 모듈
-signal
-
-# 인터프리터와 상호작용
-sys
