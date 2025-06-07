@@ -3,12 +3,12 @@ import pandas as pd
 import os
 from datetime import datetime
 from config.settings import SENSOR_API_URL
-
 import logging
 
-DATA_DIR = "data"
+DATA_DIR = "data/sensors"  # 센서별 폴더 구조 기준 경로
 SENSOR_ENDPOINT = f"{SENSOR_API_URL}/threshold-histories/date"
 logger = logging.getLogger(__name__)
+
 
 def flatten_sensor_data(raw_data) -> pd.DataFrame:
     """
@@ -33,7 +33,7 @@ def flatten_sensor_data(raw_data) -> pd.DataFrame:
                     "min_diff": t.get("min_diff"),
                     "max_diff": t.get("max_diff"),
                     "avg_diff": t.get("avg_diff"),
-                    "date": pd.to_datetime(t.get("calculated_at"))
+                    "date": pd.to_datetime(t.get("calculated_at"), unit='ms')  # 밀리초 단위 변환
                 })
 
     return pd.DataFrame(records)
@@ -43,17 +43,13 @@ def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
     """
     센서 서비스에서 임계치 변화량 데이터를 받아와 평탄화합니다.
     target_date가 None이면 오늘 날짜 기준으로 요청합니다.
-    Args:
-        target_date (datetime): 조회할 날짜
-    Returns:
-        pd.DataFrame
     """
     try:
         if target_date is None:
             target_date = datetime.now()
         date_str = target_date.strftime("%Y-%m-%d")
         url = f"{SENSOR_ENDPOINT}/{date_str}"
-        
+
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         raw_data = response.json()
@@ -62,32 +58,36 @@ def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
         logger.error(f"센서 API 호출 실패: {e}", exc_info=True)
         return pd.DataFrame()
 
-def save_unified_by_sensor_type(df: pd.DataFrame):
+
+def save_by_sensor_and_type(df: pd.DataFrame):
     """
-    센서 타입별로 데이터를 하나의 CSV로 통합 저장합니다.
+    센서 ID별 폴더 내에 타입별 CSV 파일로 저장합니다.
+    기존 파일이 있으면 중복 제거 후 이어쓰기 합니다.
     """
     if df.empty:
         logger.info("저장할 데이터가 없습니다.")
         return
 
-    os.makedirs(DATA_DIR, exist_ok=True)
+    for sensor_id, sensor_df in df.groupby("sensor_id"):
+        sensor_dir = os.path.join(DATA_DIR, sensor_id)
+        os.makedirs(sensor_dir, exist_ok=True)
 
-    for sensor_type, group_df in df.groupby("sensor_type"):
-        filename = f"{sensor_type}.csv"
-        csv_path = os.path.join(DATA_DIR, filename)
+        for sensor_type, group_df in sensor_df.groupby("sensor_type"):
+            csv_path = os.path.join(sensor_dir, f"{sensor_type}.csv")
 
-        if os.path.exists(csv_path):
-            existing_df = pd.read_csv(csv_path, parse_dates=["date"])
-            combined_df = pd.concat([existing_df, group_df], ignore_index=True)
-            combined_df.drop_duplicates(subset=["gateway_id", "sensor_id", "date"], inplace=True)
-        else:
-            combined_df = group_df
+            if os.path.exists(csv_path):
+                existing_df = pd.read_csv(csv_path, parse_dates=["date"])
+                combined_df = pd.concat([existing_df, group_df], ignore_index=True)
+                # 중복 제거: gateway_id, sensor_id, sensor_type, date 기준
+                combined_df.drop_duplicates(subset=["gateway_id", "sensor_id", "sensor_type", "date"], inplace=True)
+            else:
+                combined_df = group_df
 
-        combined_df.sort_values(by=["sensor_id", "date"], inplace=True)
-        combined_df.to_csv(csv_path, index=False)
-        logger.info(f"{sensor_type} → {len(group_df)}개 저장 완료 ({datetime.now().isoformat()})")
+            combined_df.sort_values(by=["date"], inplace=True)
+            combined_df.to_csv(csv_path, index=False)
+            logger.info(f"센서 {sensor_id} - 타입 {sensor_type}: {len(group_df)}개 저장 완료 ({datetime.now().isoformat()})")
+
 
 if __name__ == "__main__":
-    # 현재 날짜를 자동으로 넣어서 호출
     df = fetch_threshold_history(datetime.now())
-    save_unified_by_sensor_type(df)
+    save_by_sensor_and_type(df)
