@@ -7,7 +7,7 @@ from config.settings import SENSOR_API_URL
 import logging
 
 DATA_DIR = "data"
-SENSOR_ENDPOINT = f"{SENSOR_API_URL}/api/threshold-histories"
+SENSOR_ENDPOINT = f"{SENSOR_API_URL}/api/threshold-histories/date"
 logger = logging.getLogger(__name__)
 
 def flatten_sensor_data(raw_data: dict) -> pd.DataFrame:
