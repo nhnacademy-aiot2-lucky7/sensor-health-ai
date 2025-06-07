@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from datetime import datetime
-from services.sensor_service import fetch_threshold_history, save_unified_by_sensor_type, DATA_DIR
+from services.sensor_service import fetch_threshold_history, save_by_sensor_and_type, DATA_DIR
 from models.health_predictor import predict
 from services.analysis_result_service import send_analysis_result
 
@@ -20,7 +20,7 @@ def run_pipeline():
 
     # 2. 수집된 데이터를 센서타입별 CSV로 저장
     logger.info("💾 센서 타입별 CSV 저장")
-    save_unified_by_sensor_type(df)
+    save_by_sensor_and_type(df)
 
     # 3. CSV 파일을 불러와서 센서별로 health_predictor 호출
     for sensor_type_file in os.listdir(DATA_DIR):
