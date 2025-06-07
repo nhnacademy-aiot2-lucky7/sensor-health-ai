@@ -10,28 +10,34 @@ DATA_DIR = "data"
 SENSOR_ENDPOINT = f"{SENSOR_API_URL}/threshold-histories/date"
 logger = logging.getLogger(__name__)
 
-def flatten_sensor_data(raw_data: dict) -> pd.DataFrame:
+def flatten_sensor_data(raw_data) -> pd.DataFrame:
     """
     중첩된 센서 데이터를 평탄화하여 DataFrame으로 변환합니다.
+    raw_data는 dict 또는 list일 수 있습니다.
     """
     records = []
 
-    gateway_id = raw_data.get("gateway_id")
-    for sensor in raw_data.get("sensors", []):
-        sensor_id = sensor.get("sensor_id")
-        for t in sensor.get("types", []):
-            sensor_type = t.get("type_en_name") or t.get("type")
-            records.append({
-                "gateway_id": gateway_id,
-                "sensor_id": sensor_id,
-                "sensor_type": sensor_type,
-                "min_diff": t.get("min_diff"),
-                "max_diff": t.get("max_diff"),
-                "avg_diff": t.get("avg_diff"),
-                "date": pd.to_datetime(t.get("calculated_at"))
-            })
+    # raw_data가 list이면 반복 처리
+    data_list = raw_data if isinstance(raw_data, list) else [raw_data]
+
+    for item in data_list:
+        gateway_id = item.get("gateway_id")
+        for sensor in item.get("sensors", []):
+            sensor_id = sensor.get("sensor_id")
+            for t in sensor.get("types", []):
+                sensor_type = t.get("type_en_name") or t.get("type")
+                records.append({
+                    "gateway_id": gateway_id,
+                    "sensor_id": sensor_id,
+                    "sensor_type": sensor_type,
+                    "min_diff": t.get("min_diff"),
+                    "max_diff": t.get("max_diff"),
+                    "avg_diff": t.get("avg_diff"),
+                    "date": pd.to_datetime(t.get("calculated_at"))
+                })
 
     return pd.DataFrame(records)
+
 
 def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
     """
