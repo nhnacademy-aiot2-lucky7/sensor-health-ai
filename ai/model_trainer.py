@@ -2,12 +2,12 @@ import pandas as pd
 import pickle
 import os
 import logging
+from config.settings import REQUIRED_DAYS
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
 # 설정
-REQUIRED_DAYS = 15
 REQUIRED_COLUMNS = {'min_diff', 'max_diff', 'avg_diff', 'health_score'}
 
 # 로거 설정

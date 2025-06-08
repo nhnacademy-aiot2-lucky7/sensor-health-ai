@@ -19,7 +19,7 @@ def flatten_sensor_data(raw_data) -> pd.DataFrame:
 
     # raw_data가 list이면 반복 처리
     data_list = raw_data if isinstance(raw_data, list) else [raw_data]
-    logger.info(f"request 데이터: {raw_data}")
+    
     for item in data_list:
         gateway_id = item.get("gateway_id")
         for sensor in item.get("sensors", []):

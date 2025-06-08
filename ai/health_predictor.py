@@ -3,7 +3,7 @@ import pickle
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from models.heuristic_health_score import heuristic_health_score
+from ai.heuristic_health_score import heuristic_health_score
 from services.analysis_result_service import send_analysis_result
 
 
