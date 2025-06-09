@@ -53,6 +53,7 @@ def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
         response = requests.get(url, timeout=5)
         response.raise_for_status()
         raw_data = response.json()
+        
         logger.info(f"raw_data 확인 : {raw_data}")
         return flatten_sensor_data(raw_data)
     except Exception as e:
