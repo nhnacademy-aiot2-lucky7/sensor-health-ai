@@ -9,8 +9,8 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-schedule.every().day.at("01:15").do(job_main)
-schedule.every().day.at("01:20").do(job_check)
+schedule.every().day.at("01:25").do(job_main)
+schedule.every().day.at("01:28").do(job_check)
 
 # 종료 신호 처리 함수
 def signal_handler(sig, frame):

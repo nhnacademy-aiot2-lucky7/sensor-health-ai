@@ -55,7 +55,7 @@ def fetch_threshold_history(target_date: datetime = None) -> pd.DataFrame:
         raw_data = response.json()
         
         logger.info(f"raw_data 확인 : {raw_data}")
-        return flatten_sensor_data(raw_data)
+        return raw_data
     except Exception as e:
         logger.error(f"센서 API 호출 실패: {e}", exc_info=True)
         return pd.DataFrame()
